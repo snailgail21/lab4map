@@ -1,0 +1,142 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Lab 4</title>
+
+         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+           crossorigin=""/>
+
+         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+           crossorigin=""></script>
+
+		<style type="text/css">
+			html, body { margin: 0; padding: 0; height: 100%; }
+			#map { min-height: 100%; }
+		</style>
+		
+		<style>
+  /* Optional: adjust the values below to change the appearance of the legend */
+  .legend {
+      padding: 6px 8px;
+      line-height: 18px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+		}
+
+  /* Optional: adjust the values below to change the appearance of the legend color boxes */
+  .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+		}
+		</style>
+
+		<script type="text/javascript" src="data.js"></script>
+    </head>
+
+    <body>
+        <div class="header">
+  <h1>Population Density and the Average Maximum Land Surface Temperature during Summer for Chicago's Community areas</h1>
+</div>
+		<div id="map"></div>
+        <script type="text/javascript">
+
+          var map = L.map('map', {
+              center: [41.8337105,-87.731879],
+              zoom: 10
+          });
+		  
+		var topography = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+		attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+		}).addTo(map);
+
+		var street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+		attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+		}).addTo(map);
+		
+		function getColor(value) {
+		return value > 8257 ? '#b30000':
+           value > 5368  ? '#e34a33':
+           value > 3852  ? '#fc8d59':
+           value > 1847  ? '#fdcc8a':
+                         '#fef0d9';
+		}
+
+		function style(feature){
+		return {
+        fillColor: getColor(feature.properties.PopDen),   // pop_den is the field name for the population density data
+        weight: 2,
+        opacity: 1,
+        color: 'gray',
+        fillOpacity: 0.9
+		};
+		}
+		
+		var chicago = L.geoJson(data, {style:style}).addTo(map);
+		
+		var nasa = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?', {
+		layers: 'UHI_Avg_Summer_Day_Max_Land_Surface_Temp_2013',
+		format: 'image/png',
+		transparent: true,
+		opacity: 0.6,
+		attribution: 'Imagery courtesy of NASA EOSDIS GIBS',
+		time: '2026-10-05'
+		}).addTo(map);
+
+		var basemaps = {
+		"World Topography Map": topography,
+		"World Street Map": street
+		};
+
+		var overlaymaps = {
+		"Chicago Community Areas": chicago,
+		"NASA Imagery": nasa
+		};
+
+		L.control.layers(basemaps, overlaymaps).addTo(map);
+
+// Removing the legend when the layer is removed
+		map.on('overlayremove', function(eventLayer){
+		if (eventLayer.name == 'Chicago Community Areas'){ // We use the key/display name to refer to the layer
+		map.removeControl(legend); // legend is the variable name of the layer legend
+		}
+		});
+
+// Adding the legend when the layer is added
+		map.on('overlayadd', function(eventLayer){
+		if (eventLayer.name == 'Chicago Community Areas'){
+		legend.addTo(map);
+		}
+		});
+
+		var legend = L.control({position: 'bottomright'}); // Try the other three corners if you like.
+
+		legend.onAdd = function (map) {
+
+		var div = L.DomUtil.create('div', 'legend'),
+			grades = [369, 1847, 3852, 5368, 8257]; // The break values that define the intervals, note we begin from 0 here
+
+		div.innerHTML = '<b>Population Density <br> 2023 <br></b>'; // The legend title, written in HTML
+
+    // Loop through the classes and generate a label with a color box for each interval.
+    // If you are creating a choropleth map, you DO NOT need to change the lines below.
+		for (var i = 0; i < grades.length; i++) {
+        div.innerHTML +=
+        '<i style="background:' + getColor(grades[i] + 1) + '"></i>' +
+        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+		}
+
+		return div;
+		};
+
+		legend.addTo(map);
+		
+        </script>
+   </body>
+</html>
